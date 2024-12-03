@@ -43,7 +43,7 @@ async def embeddings(
         # Generate embeddings
         log.info("Generating embeddings for input.")
         response = model.embed(embeddings_request)
-        log.debug("Generated embeddings response: %s", response)
+        log.debug("Generated embeddings")
 
         return response
 
