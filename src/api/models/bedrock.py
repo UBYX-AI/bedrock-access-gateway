@@ -931,8 +931,8 @@ class BedrockEmbeddingsModel(BaseEmbeddingsModel, ABC):
                 total_tokens=input_tokens + output_tokens,
             ),
         )
-        if DEBUG:
-            logger.info("Proxy response :" + response.model_dump_json())
+        # if DEBUG:
+        #     logger.info("Proxy response :" + response.model_dump_json())
         return response
 
 
