@@ -34,7 +34,7 @@ async def embeddings(
             ),
         ]
 ):
-    log.debug("Received embeddings request: %s", embeddings_request)
+    # log.debug("Received embeddings request: %s", embeddings_request)
     try:
         if embeddings_request.model.lower().startswith("text-embedding-"):
             embeddings_request.model = DEFAULT_EMBEDDING_MODEL
