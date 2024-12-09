@@ -57,6 +57,7 @@ bedrock_runtime_eu3 = boto3.client(
 SUPPORTED_BEDROCK_EMBEDDING_MODELS = {
     "cohere.embed-multilingual-v3": "Cohere Embed Multilingual",
     "cohere.embed-english-v3": "Cohere Embed English",
+    "Alibaba-NLP/gte-Qwen2-1.5B-instruct": "Gte Qwen Embed Multilingual"
     # Disable Titan embedding.
     # "amazon.titan-embed-text-v1": "Titan Embeddings G1 - Text",
     # "amazon.titan-embed-image-v1": "Titan Multimodal Embeddings G1"
@@ -1042,6 +1043,50 @@ class CohereEmbeddingsModel(BedrockEmbeddingsModel):
             encoding_format=embeddings_request.encoding_format,
         )
 
+class AlibabaEmbeddingsModel(BedrockEmbeddingsModel):
+    EMBEDDING_API_URL = "http://gte_qwen:7997/embeddings"
+
+    def _parse_args(self, embeddings_request: EmbeddingsRequest) -> dict:
+        texts = []
+        if isinstance(embeddings_request.input, str):
+            texts = [embeddings_request.input]
+        elif isinstance(embeddings_request.input, list):
+            texts = embeddings_request.input
+        elif isinstance(embeddings_request.input, Iterable):
+            # For encoded input
+            # The workaround is to use tiktoken to decode to get the original text.
+            encodings = []
+            for inner in embeddings_request.input:
+                if isinstance(inner, int):
+                    # Iterable[int]
+                    encodings.append(inner)
+                else:
+                    # Iterable[Iterable[int]]
+                    text = ENCODER.decode(list(inner))
+                    texts.append(text)
+            if encodings:
+                texts.append(ENCODER.decode(encodings))
+        return {
+            "model": embeddings_request.model,
+            "input": texts,
+            "modality": "text",
+        }
+
+    def embed(self, embeddings_request: EmbeddingsRequest) -> EmbeddingsResponse:
+        args = self._parse_args(embeddings_request)
+        try:
+            response = requests.post(self.EMBEDDING_API_URL, json=args)
+            response.raise_for_status()
+            embeddings_data = response.json()['data']
+        except requests.exceptions.RequestException as e:
+            logger.error("Error generating embeddings: " + str(e))
+            raise HTTPException(status_code=500, detail=f"Error generating embeddings: {str(e)}")
+
+        return self._create_response(
+            embeddings=[embedding['embedding'] for embedding in embeddings_data],
+            model=embeddings_request.model,
+            encoding_format=embeddings_request.encoding_format,
+        )
 
 class TitanEmbeddingsModel(BedrockEmbeddingsModel):
 
@@ -1091,6 +1136,8 @@ def get_embeddings_model(model_id: str) -> BedrockEmbeddingsModel:
     match model_name:
         case "Cohere Embed Multilingual" | "Cohere Embed English":
             return CohereEmbeddingsModel()
+        case "Gte Qwen Embed Multilingual":
+            return AlibabaEmbeddingsModel()
         case _:
             logger.error("Unsupported model id " + model_id)
             raise HTTPException(
