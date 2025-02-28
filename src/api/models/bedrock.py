@@ -123,6 +123,12 @@ class BedrockModel(BaseChatModel):
             "tool_call": True,
             "stream_tool_call": True,
         },
+        "anthropic.claude-3-7-sonnet-20250219-v1:0": {
+            "system": True,
+            "multimodal": True,
+            "tool_call": True,
+            "stream_tool_call": True,
+        },
         "meta.llama2-13b-chat-v1": {
             "system": True,
             "multimodal": False,
